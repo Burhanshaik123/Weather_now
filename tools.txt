@@ -1,0 +1,5 @@
+React
+TailwindCSS
+Open-Meteo API
+Open-Meteo Geocoding API
+shadcn/ui

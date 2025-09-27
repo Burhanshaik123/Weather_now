@@ -1,0 +1,118 @@
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+// WeatherNowApp: Clean, responsive, and user-friendly weather app for Jamie
+export default function WeatherApp() {
+  const [city, setCity] = useState("");
+  const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch weather for the entered city
+  const fetchWeather = async () => {
+    if (!city) return;
+    setLoading(true);
+    setWeather(null);
+
+    try {
+      // Step 1: Get coordinates using Open-Meteo Geocoding API
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`
+      );
+      const geoData = await geoRes.json();
+
+      if (!geoData.results || geoData.results.length === 0) {
+        setWeather({ error: "City not found. Please try another city." });
+        setLoading(false);
+        return;
+      }
+
+      const { latitude, longitude, name, country } = geoData.results[0];
+
+      // Step 2: Fetch current weather
+      const weatherRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+      );
+      const weatherData = await weatherRes.json();
+
+      // Map weather code to friendly label
+      const weatherLabels = {
+        0: "Clear sky",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Fog",
+        48: "Depositing rime fog",
+        51: "Drizzle light",
+        53: "Drizzle moderate",
+        55: "Drizzle dense",
+        56: "Freezing drizzle light",
+        57: "Freezing drizzle dense",
+        61: "Rain slight",
+        63: "Rain moderate",
+        65: "Rain heavy",
+        66: "Freezing rain light",
+        67: "Freezing rain heavy",
+        71: "Snow fall slight",
+        73: "Snow fall moderate",
+        75: "Snow fall heavy",
+        77: "Snow grains",
+        80: "Rain showers slight",
+        81: "Rain showers moderate",
+        82: "Rain showers violent",
+        85: "Snow showers slight",
+        86: "Snow showers heavy",
+        95: "Thunderstorm",
+        96: "Thunderstorm with slight hail",
+        99: "Thunderstorm with heavy hail",
+      };
+
+      setWeather({
+        city: `${name}, ${country}`,
+        temperature: weatherData.current_weather.temperature,
+        wind: weatherData.current_weather.windspeed,
+        condition: weatherLabels[weatherData.current_weather.weathercode] || "Unknown",
+      });
+    } catch (error) {
+      setWeather({ error: "Network error. Please try again later." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 to-blue-500 p-4">
+      <Card className="w-full max-w-md shadow-2xl rounded-2xl">
+        <CardContent className="p-6 space-y-4">
+          <h1 className="text-2xl font-bold text-center">Weather Now</h1>
+
+          <div className="flex gap-2 flex-col sm:flex-row">
+            <input
+              type="text"
+              placeholder="Enter city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="flex-1 border rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <Button onClick={fetchWeather} disabled={loading} className="mt-2 sm:mt-0">
+              {loading ? "Loading..." : "Check"}
+            </Button>
+          </div>
+
+          {weather && !weather.error && (
+            <div className="bg-white rounded-xl p-4 text-center shadow-md mt-4">
+              <h2 className="text-lg font-semibold">{weather.city}</h2>
+              <p className="text-3xl font-bold">{weather.temperature}°C</p>
+              <p className="text-sm">💨 {weather.wind} km/h wind</p>
+              <p className="text-sm">{weather.condition}</p>
+            </div>
+          )}
+
+          {weather?.error && (
+            <p className="text-red-600 text-center mt-4">{weather.error}</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
